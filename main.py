@@ -3,19 +3,19 @@
 import random
 
 #Simulation Definition
-simParams = {'iter_limit':5, #Limit on number of simulation steps or iterations
-              'height': 10, #Size of simulation world (Height, Width)
-              'width' : 10,
+simParams = {'iter_limit':10, #Limit on number of simulation steps or iterations
+              'height': 9, #Size of simulation world (Height, Width)
+              'width' : 9,
               'landmarks' : [('Hill 1', 3,4),
                              ('Boulder', 4,1)],
               'states' : [],
               'reward' : [],
-              'start1' : (0,3,0), #Initial pose (X, Y, orientation) oreintation = 0,1,2,3=N,E,S,W
+              'start1' : (0,4,1), #Initial pose (X, Y, orientation) oreintation = 0,1,2,3=N,E,S,W
               'start2' : (),
               'goal' : (),
               'state1' : (),
               'state2' : (),
-              'action_que1' : ['F','F','F','R','F'], #Forced initial actions
+              'action_que1' : ['F','F','F','F','F','F','F','F','F'], #Forced initial actions
               'ordinals' : {'0':'N',
                             '1':'E',
                             '2':'S',
@@ -62,14 +62,29 @@ class POMDP():
     def __init__(self):
         pass
     
-    def transition(self,s,a):
-        """ Transitions from state "s" to state "s2" using action "a" """
+    def transitionFnct(self,s,b,a):
+        """ Transitions from state "s" to state "s2" using action "a".
+        This function will also perform belief propagation if a belief matrix is supplied
+        
+        Args:
+            s        True state of agent
+            b        Belief matrix of agent
+            a        action agent has taken
+            
+        Returns:
+            s2         new actual state as result of a
+            b_local    list of locations that have just had their beliefs changed by this action (X,Y,prob)
+            """
+            
         X1,Y1,Or1 = s
         Or2 = Or1
+        b_local = []
         if a == 'F':
             #Find Proposed new location
             dx,dy = self.world.moves[str(Or1)]
             X2,Y2 = [X1+dx,Y1+dy]
+            new_b = (X1,Y1,0)
+            b_local.append(new_b)
             if a in self.world.transProb.keys():
                 prob = self.world.transProb[a]
             else:
@@ -122,12 +137,26 @@ class POMDP():
             pass
         elif a == 'A': #Announce at goal
             pass
+        Xn,Yn,Orn = s2
+        if Xn > self.world.width-1:
+            Xn = self.world.width-1
+        if Xn < 0:
+            Xn = 0
+        if Yn > self.world.height-1:
+            Yn = self.world.height-1
+        if Yn < 0:
+            Yn = 0
+        if not self.world.map[Xn][Yn]==0: #If there is an obsticle in the way
+            #TO DO - differentiate between obsticle/landmark/other rover and goal
+            Xn,Yn = X1,Y1
+        s2 = (Xn, Yn, Orn)
         
         return s2
     
     def beliefProp(self,b,a):
         """ Propagates belief after action "a" """
-        #Find all locations where 
+        #Find all locations where belief is nonzero
+        
     
     def observe(self,s):
         """ Returns observation "E" from system in state "s" """
@@ -143,6 +172,7 @@ class roverObject(object):
     orientation = 1
     s_p = [] #State estimate
     s = [] #True State
+    b = [] #belief matrix
     action_que = []
     
     
@@ -151,7 +181,7 @@ class roverObject(object):
         pass
     
     def do_action(self,action):
-        self.s = self.world.POMDP.transition(self.s,action)
+        self.s = self.world.POMDP.transitionFnct(self.s,self.b,action)
         pass
     
     def observe(self):
@@ -194,11 +224,11 @@ class worldObject(object):
     def step(self):
         """ Runs simulation step
         """
-        
+        self.iter +=1
         for agent in self.agents:
             agent.update()
             self.move_in_world(agent)
-        self.iter +=1
+        
         print(len(self.agents)) #debug print
         
     def move_in_world(self,thing):
@@ -206,7 +236,8 @@ class worldObject(object):
         pose = thing.s[:2]
 #        if thing.name in self.map:
 #            self.map.remove(thing.name)
-        tag = thing.name +'%s_%d'%(self.ordinals[str(thing.s[2])], self.iter, )
+        ordinal = self.ordinals[str(thing.s[2])]
+        tag = thing.name +'%s_%d'%(ordinal, self.iter)
         self.map[pose[0]][pose[1]] = tag
         
     """ Non data altering methods after this point.
