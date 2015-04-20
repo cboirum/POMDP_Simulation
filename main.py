@@ -257,6 +257,10 @@ class worldObject(object):
         for row in self.agents[0].belief:
             print row
             
+def printTmatrix():
+    pass
+
+            
 def run():
     sim = POMDP()
     moon = worldObject(sim,simParams)
