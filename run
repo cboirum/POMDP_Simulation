@@ -1,0 +1,19 @@
+#/bin/bash
+
+echo "Generating pomdp to out.pomdp"
+python gen_pomdp.py
+
+echo "Converting to .pomdpx"
+./../appl-0.96/src/pomdpconvert out.pomdp
+
+echo "Solving pomdp"
+./../appl-0.96/src/pomdpsol --timeout 30 out.pomdpx
+
+echo "Simulating pomdp"
+./../appl-0.96/src/pomdpsim --simLen 100 --simNum 1000 --policy-file out.policy out.pomdpx
+
+echo "Evaluating pomdp"
+./../appl-0.96/src/pomdpeval --simLen 100 --simNum 1000 --policy-file out.policy out.pomdpx
+
+echo "Graphing pomdp"
+# ./../appl-0.96/src/polgraph --policy-file out.policy --policy-graph out.dot out.pomdpx
